@@ -1,9 +1,8 @@
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
+import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import { ShadowingSession } from "../screens/ShadowingSession";
 import { SpeechService } from "../services/speech.service";
 
-// Mock the entire expo-av module
 jest.mock("expo-av", () => ({
   Video: "Video",
   ResizeMode: {
@@ -11,14 +10,14 @@ jest.mock("expo-av", () => ({
   },
 }));
 
-// Mock expo-speech module
 jest.mock("expo-speech", () => ({
   speak: jest.fn(),
 }));
 
-jest.mock("../services/speech.service");
+jest.mock("../services/speech.service", () => ({
+  startListening: jest.fn().mockResolvedValue("test speech"),
+}));
 
-// Mock expo-modules-core
 jest.mock("expo-modules-core", () => ({
   EventEmitter: jest.fn(),
   Platform: { select: jest.fn() },
@@ -40,16 +39,24 @@ describe("ShadowingSession", () => {
 
   it("renders correctly with video props", () => {
     const { getByTestId } = render(<ShadowingSession route={mockRoute} />);
-
     expect(getByTestId("video-container")).toBeTruthy();
   });
 
   it("starts shadowing when button is pressed", async () => {
     const { getByText } = render(<ShadowingSession route={mockRoute} />);
+    const button = getByText("Start Shadowing");
+    fireEvent.press(button);
+    expect(SpeechService.startListening).toHaveBeenCalled();
+  });
 
+  it("displays score after shadowing completion", async () => {
+    const { getByText } = render(<ShadowingSession route={mockRoute} />);
     const button = getByText("Start Shadowing");
     fireEvent.press(button);
 
-    expect(SpeechService.startListening).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(getByText(/Score:/)).toBeTruthy();
+      expect(getByText(/Grade:/)).toBeTruthy();
+    });
   });
 });
