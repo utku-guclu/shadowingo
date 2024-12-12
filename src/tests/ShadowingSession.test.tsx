@@ -1,7 +1,8 @@
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { render, fireEvent, act } from "@testing-library/react-native";
 import { ShadowingSession } from "../screens/ShadowingSession";
-import { SpeechService } from "../services/speech.service";
+
+jest.useFakeTimers();
 
 jest.mock("expo-av", () => ({
   Video: "Video",
@@ -14,8 +15,12 @@ jest.mock("expo-speech", () => ({
   speak: jest.fn(),
 }));
 
+const mockStartListening = jest.fn().mockResolvedValue("test speech");
+
 jest.mock("../services/speech.service", () => ({
-  startListening: jest.fn().mockResolvedValue("test speech"),
+  SpeechService: {
+    startListening: () => mockStartListening(),
+  },
 }));
 
 jest.mock("expo-modules-core", () => ({
@@ -44,19 +49,30 @@ describe("ShadowingSession", () => {
 
   it("starts shadowing when button is pressed", async () => {
     const { getByText } = render(<ShadowingSession route={mockRoute} />);
-    const button = getByText("Start Shadowing");
-    fireEvent.press(button);
-    expect(SpeechService.startListening).toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.press(getByText("Start Shadowing"));
+    });
+
+    expect(mockStartListening).toHaveBeenCalled();
   });
 
   it("displays score after shadowing completion", async () => {
     const { getByText } = render(<ShadowingSession route={mockRoute} />);
-    const button = getByText("Start Shadowing");
-    fireEvent.press(button);
 
-    await waitFor(() => {
-      expect(getByText(/Score:/)).toBeTruthy();
-      expect(getByText(/Grade:/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(getByText("Start Shadowing"));
     });
+
+    expect(getByText(/Score:/)).toBeTruthy();
+    expect(getByText(/Grade:/)).toBeTruthy();
+  });
+
+  it("handles animations properly", () => {
+    const { getByTestId } = render(<ShadowingSession route={mockRoute} />);
+
+    jest.advanceTimersByTime(1000);
+
+    expect(getByTestId("video-container")).toBeTruthy();
   });
 });

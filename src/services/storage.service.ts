@@ -20,4 +20,20 @@ export class StorageService {
       throw new Error("Failed to retrieve user data");
     }
   }
+
+  static async setItem(key: string, value: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (error) {
+      throw new Error(`Failed to save data for key: ${key}`);
+    }
+  }
+
+  static async getItem(key: string): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch (error) {
+      throw new Error(`Failed to retrieve data for key: ${key}`);
+    }
+  }
 }
