@@ -1,6 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
+import YoutubePlayer from "react-native-youtube-iframe";
 import { SpeechService } from "../services/speech.service";
 import { ScoringService } from "../services/scoring.service";
 import { VideoDetails } from "../services/youtube.service";
@@ -18,13 +18,11 @@ export const ShadowingSession = ({ route }: Props) => {
   const [userSpeech, setUserSpeech] = useState("");
   const [score, setScore] = useState<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const videoRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
   const { video } = route.params;
 
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (!status.isLoaded) return;
-
-    if (status.didJustFinish) {
+  const onStateChange = (state: string) => {
+    if (state === "ended") {
       startShadowing();
     }
   };
@@ -47,13 +45,11 @@ export const ShadowingSession = ({ route }: Props) => {
 
   return (
     <View style={styles.container} testID="video-container">
-      <Video
-        ref={videoRef}
-        source={{ uri: `https://www.youtube.com/watch?v=${video.id}` }}
-        style={styles.video}
-        useNativeControls
-        resizeMode={ResizeMode.CONTAIN}
-        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+      <YoutubePlayer
+        height={300}
+        play={playing}
+        videoId={video.id}
+        onChangeState={onStateChange}
       />
       <TouchableOpacity
         style={styles.button}
@@ -79,10 +75,6 @@ export const ShadowingSession = ({ route }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  video: {
-    width: "100%",
-    height: 300,
   },
   button: {
     padding: 15,

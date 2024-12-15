@@ -4,16 +4,16 @@ import { ShadowingSession } from "../screens/ShadowingSession";
 
 jest.useFakeTimers();
 
-jest.mock("expo-av", () => ({
-  Video: "Video",
-  ResizeMode: {
-    CONTAIN: "contain",
-  },
-}));
-
-jest.mock("expo-speech", () => ({
-  speak: jest.fn(),
-}));
+jest.mock("react-native-youtube-iframe", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  return function MockYoutubePlayer({ videoId, height }: any) {
+    return React.createElement(View, {
+      testID: `youtube-player-${videoId}`,
+      style: { height },
+    });
+  };
+});
 
 const mockStartListening = jest.fn().mockResolvedValue("test speech");
 
@@ -23,9 +23,11 @@ jest.mock("../services/speech.service", () => ({
   },
 }));
 
-jest.mock("expo-modules-core", () => ({
-  EventEmitter: jest.fn(),
-  Platform: { select: jest.fn() },
+jest.mock("../services/scoring.service", () => ({
+  ScoringService: {
+    calculateSimilarity: () => 85,
+    getGrade: () => "A",
+  },
 }));
 
 describe("ShadowingSession", () => {
@@ -49,30 +51,24 @@ describe("ShadowingSession", () => {
 
   it("starts shadowing when button is pressed", async () => {
     const { getByText } = render(<ShadowingSession route={mockRoute} />);
-
     await act(async () => {
       fireEvent.press(getByText("Start Shadowing"));
     });
-
     expect(mockStartListening).toHaveBeenCalled();
   });
 
   it("displays score after shadowing completion", async () => {
     const { getByText } = render(<ShadowingSession route={mockRoute} />);
-
     await act(async () => {
       fireEvent.press(getByText("Start Shadowing"));
     });
-
     expect(getByText(/Score:/)).toBeTruthy();
     expect(getByText(/Grade:/)).toBeTruthy();
   });
 
   it("handles animations properly", () => {
     const { getByTestId } = render(<ShadowingSession route={mockRoute} />);
-
     jest.advanceTimersByTime(1000);
-
     expect(getByTestId("video-container")).toBeTruthy();
   });
 });

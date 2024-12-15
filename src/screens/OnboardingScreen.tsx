@@ -9,6 +9,7 @@ export const OnboardingScreen = ({ navigation }: any) => {
   const handleSubmit = async () => {
     const newUser: User = {
       id: Date.now().toString(),
+      avatar: "",
       username,
       createdAt: new Date().toISOString(),
       statistics: {
@@ -18,7 +19,7 @@ export const OnboardingScreen = ({ navigation }: any) => {
     };
 
     await StorageService.saveUser(newUser);
-    navigation.replace("Home");
+    navigation.replace("VideoSelection");
   };
 
   return (

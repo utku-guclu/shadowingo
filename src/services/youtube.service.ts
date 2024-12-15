@@ -1,3 +1,5 @@
+import { YOUTUBE_API_KEY } from "@env";
+
 export interface VideoDetails {
   id: string;
   title: string;
@@ -20,11 +22,9 @@ interface YouTubeSearchResultItem {
 }
 
 export class YouTubeService {
-  private static API_KEY = process.env.YOUTUBE_API_KEY; // We'll handle this properly with environment variables later
-
   static async searchVideos(query: string): Promise<VideoDetails[]> {
     const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&key=${this.API_KEY}`,
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&key=${YOUTUBE_API_KEY}`,
     );
     const data = await response.json();
 

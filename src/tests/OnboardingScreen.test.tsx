@@ -23,7 +23,7 @@ describe("OnboardingScreen", () => {
 
     await waitFor(() => {
       expect(StorageService.saveUser).toHaveBeenCalled();
-      expect(mockNavigation.replace).toHaveBeenCalledWith("Home");
+      expect(mockNavigation.replace).toHaveBeenCalledWith("VideoSelection");
     });
   });
 });

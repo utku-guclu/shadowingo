@@ -19,7 +19,7 @@ export const VideoSelectionScreen = ({ navigation }: any) => {
   };
 
   const handleVideoSelect = (video: VideoDetails) => {
-    navigation.navigate("ShadowingSession", { video });
+    navigation.navigate("Shadowing", { video });
   };
 
   return (
