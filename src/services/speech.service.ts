@@ -4,7 +4,12 @@ import Voice, { SpeechResultsEvent } from "@react-native-voice/voice";
 export class SpeechService {
   private static voice = Voice;
 
+  static async initialize() {
+    await Voice.isAvailable();
+  }
+
   static async startListening(): Promise<string> {
+    await this.initialize(); // Add this line
     try {
       await this.voice.start("en-US");
 
@@ -21,7 +26,6 @@ export class SpeechService {
       return "";
     }
   }
-
   static async speak(text: string): Promise<void> {
     await Speech.speak(text, {
       language: "en",
