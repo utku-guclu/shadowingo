@@ -1,31 +1,34 @@
 import React from "react";
-import { render, waitFor } from "@testing-library/react-native";
+import { render } from "@testing-library/react-native";
 import { StatisticsScreen } from "../screens/StatisticsScreen";
-import { StorageService } from "../services/storage.service";
 
-jest.mock("../services/storage.service");
+// Mock StorageService
+jest.mock("../services/storage.service", () => ({
+  StorageService: {
+    getUser: jest.fn().mockResolvedValue({
+      statistics: {
+        totalSessions: 42,
+        averageScore: 85,
+      },
+    }),
+  },
+}));
+
+// Mock React Native components
+jest.mock("react-native", () => ({
+  StyleSheet: {
+    create: (styles: any) => styles,
+  },
+  View: "View",
+  Text: "Text",
+}));
 
 describe("StatisticsScreen", () => {
-  const mockUser = {
-    id: "123",
-    username: "testuser",
-    createdAt: "2023-01-01",
-    statistics: {
-      totalSessions: 10,
-      averageScore: 80.91,
-    },
-  };
+  it("renders statistics correctly", async () => {
+    const { findByText } = render(<StatisticsScreen />);
 
-  beforeEach(() => {
-    (StorageService.getUser as jest.Mock).mockResolvedValue(mockUser);
-  });
-
-  it("displays user statistics correctly", async () => {
-    const { getByText } = render(<StatisticsScreen />);
-
-    await waitFor(() => {
-      expect(getByText("10")).toBeTruthy();
-      expect(getByText("80.91%")).toBeTruthy();
-    });
+    expect(await findByText("Your Progress")).toBeTruthy();
+    expect(await findByText("42")).toBeTruthy();
+    expect(await findByText("85%")).toBeTruthy();
   });
 });

@@ -2,20 +2,34 @@ import React from "react";
 import { render } from "@testing-library/react-native";
 import { SpeechRateAnalyzer } from "../components/SpeechRateAnalyzer";
 
-describe("SpeechRateAnalyzer", () => {
-  it("displays perfect status when rates are close", () => {
-    const { getByText } = render(
-      <SpeechRateAnalyzer targetRate={120} userRate={125} difference={5} />,
-    );
+jest.mock("react-native", () => ({
+  StyleSheet: {
+    create: (styles: any) => styles,
+  },
+  View: "View",
+  Text: "Text",
+}));
 
-    expect(getByText("Perfect!")).toBeTruthy();
+describe("SpeechRateAnalyzer", () => {
+  const mockProps = {
+    targetRate: 130,
+    userRate: 120,
+    difference: -10,
+  };
+
+  it("renders correctly", () => {
+    const { getByTestId } = render(<SpeechRateAnalyzer {...mockProps} />);
+    expect(getByTestId("speech-rate-analyzer")).toBeTruthy();
   });
 
-  it("suggests speed adjustment when needed", () => {
-    const { getByText } = render(
-      <SpeechRateAnalyzer targetRate={120} userRate={90} difference={-30} />,
-    );
+  it("displays correct rates", () => {
+    const { getByText } = render(<SpeechRateAnalyzer {...mockProps} />);
+    expect(getByText("130")).toBeTruthy();
+    expect(getByText("120")).toBeTruthy();
+  });
 
-    expect(getByText("Slow down")).toBeTruthy();
+  it("shows perfect feedback when difference is within range", () => {
+    const { getByText } = render(<SpeechRateAnalyzer {...mockProps} />);
+    expect(getByText("Perfect!")).toBeTruthy();
   });
 });

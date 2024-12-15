@@ -1,44 +1,59 @@
-import * as Speech from "expo-speech";
-import Voice, { SpeechResultsEvent } from "@react-native-voice/voice";
+import Voice from "@react-native-voice/voice";
 
 export class SpeechService {
-  private static voice = Voice;
+  private static currentLocale: string = "en-US";
+
+  static setLocale(locale: string) {
+    this.currentLocale = locale;
+  }
+
+  static getLocale(): string {
+    return this.currentLocale;
+  }
 
   static async initialize() {
-    await Voice.isAvailable();
+    try {
+      const isAvailable = await Voice.isAvailable();
+      if (!isAvailable) {
+        throw new Error("Speech recognition is not available");
+      }
+      await Voice.start(this.currentLocale);
+    } catch (error) {
+      throw new Error(`Speech initialization failed: ${error}`);
+    }
   }
 
   static async startListening(): Promise<string> {
-    await this.initialize(); // Add this line
     try {
-      await this.voice.start("en-US");
-
-      return new Promise((resolve) => {
-        this.voice.onSpeechResults = (e: SpeechResultsEvent) => {
-          if (e.value && e.value[0]) {
-            this.voice.stop();
+      await Voice.start(this.currentLocale);
+      return new Promise((resolve, reject) => {
+        Voice.onSpeechResults = (e: any) => {
+          if (e.value && e.value.length > 0) {
             resolve(e.value[0]);
           }
         };
+        Voice.onSpeechError = (e: any) => {
+          reject(e);
+        };
       });
     } catch (error) {
-      console.error("Error starting voice recognition:", error);
-      return "";
+      throw new Error(`Speech recognition failed: ${error}`);
     }
   }
-  static async speak(text: string): Promise<void> {
-    await Speech.speak(text, {
-      language: "en",
-      pitch: 1.0,
-      rate: 0.8,
-    });
-  }
 
-  static async stopListening(): Promise<void> {
-    await this.voice.stop();
+  static async destroy() {
+    try {
+      await Voice.destroy();
+    } catch (error) {
+      console.warn("Speech service cleanup error:", error);
+    }
   }
-
-  static async destroy(): Promise<void> {
-    await this.voice.destroy();
+  static async getSupportedLocales(): Promise<string[]> {
+    try {
+      const locales = await Voice.getSpeechRecognitionServices();
+      return locales || [];
+    } catch (error) {
+      throw new Error(`Failed to get supported locales: ${error}`);
+    }
   }
 }

@@ -3,7 +3,17 @@ import { render, fireEvent } from "@testing-library/react-native";
 import { VideoSearch } from "../components/VideoSearch";
 import { YouTubeService } from "../services/youtube.service";
 
-jest.mock("../services/youtube.service");
+// Mock React Native components
+jest.mock("react-native", () => ({
+  StyleSheet: {
+    create: (styles: any) => styles,
+  },
+  View: "View",
+  Text: "Text",
+  Image: "Image",
+  TouchableOpacity: "TouchableOpacity",
+  FlatList: "FlatList",
+}));
 
 describe("VideoSearch", () => {
   const mockOnResultsFound = jest.fn();

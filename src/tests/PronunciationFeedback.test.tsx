@@ -2,6 +2,18 @@ import React from "react";
 import { render } from "@testing-library/react-native";
 import { PronunciationFeedback } from "../components/PronunciationFeedback";
 
+// Mock React Native components
+jest.mock("react-native", () => ({
+  StyleSheet: {
+    create: (styles: any) => styles,
+  },
+  View: "View",
+  Text: "Text",
+  Image: "Image",
+  TouchableOpacity: "TouchableOpacity",
+  FlatList: "FlatList",
+}));
+
 describe("PronunciationFeedback", () => {
   const mockProps = {
     word: "Hello",
