@@ -27,6 +27,7 @@ export class YouTubeService {
       `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&key=${YOUTUBE_API_KEY}`,
     );
     const data = await response.json();
+    console.log(data);
 
     return data.items.map((item: YouTubeSearchResultItem) => ({
       id: item.id.videoId,

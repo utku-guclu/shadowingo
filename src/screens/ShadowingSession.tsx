@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import YoutubePlayer from "react-native-youtube-iframe";
-import { SpeechService } from "../services/speech.service";
+import SpeechService from "../services/speech.service";
 import { ScoringService } from "../services/scoring.service";
 import { VideoDetails } from "../services/youtube.service";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -25,8 +25,7 @@ interface Props {
 }
 
 export const ShadowingSession = ({ route }: Props) => {
-  const [transcription, setTranscription] = useState("");
-  const [userSpeech, setUserSpeech] = useState("");
+  const [displayText, setDisplayText] = useState(""); // State for displaying text
   const [score, setScore] = useState<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -34,6 +33,7 @@ export const ShadowingSession = ({ route }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("en-US");
   const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { video } = route.params;
@@ -70,49 +70,61 @@ export const ShadowingSession = ({ route }: Props) => {
   const onStateChange = (state: string) => {
     if (state === "ended") {
       setPlaying(false);
-      startShadowing();
+      setIsRecording(false);
+      setIsTranscribing(false);
     }
   };
 
   const onCaptionChange = (caption: string) => {
-    setCurrentCaption(caption);
-    setTranscription((prev) => prev + " " + caption);
+    // Update the display text with the new caption
+    setDisplayText((prev) => {
+      const newText = prev + " " + caption; // Append new caption
+      return newText.length > 100 ? newText.slice(-100) : newText; // Keep the last 100 characters
+    });
   };
 
   const startShadowing = async () => {
     setIsRecording(true);
+    setIsTranscribing(true);
     try {
-      const speech = await SpeechService.startListening();
-      setUserSpeech(speech);
-      calculateScore(speech);
+      await SpeechService.startListening((speech) => {
+        // Update the display text in real-time as speech is recognized
+        setDisplayText((prev) => {
+          const newText = speech; // Update with the current speech
+          return newText.length > 100 ? newText.slice(-100) : newText; // Keep the last 100 characters
+        });
+      });
     } catch (error) {
       console.error("Error during shadowing:", error);
     }
-    setIsRecording(false);
   };
 
   const calculateScore = (speech: string) => {
     const similarity = ScoringService.calculateSimilarity(
-      transcription,
+      currentCaption,
       speech,
     );
     setScore(similarity);
   };
 
-  const handlePlayPause = () => {
-    setPlaying(!playing);
-  };
+  const handleStartShadowing = async () => {
+    if (isTranscribing) {
+      // Stop transcription and YouTube playback
+      setIsTranscribing(false);
+      setIsRecording(false); // Stop recording
+      setPlaying(false); // Stop playing the video
+      // Call any necessary cleanup functions here
+      await SpeechService.stopListening(); // Ensure to stop listening
+    } else {
+      // Start playing the video and recording
+      setPlaying(true); // Start playing the video
+      setIsRecording(true); // Start recording
+      setIsTranscribing(true); // Set loading state
 
-  const renderScoreSection = () =>
-    score !== null && (
-      <View style={styles.scoreContainer}>
-        <Text style={styles.scoreTitle}>Performance Results</Text>
-        <Text style={styles.scoreValue}>Score: {score.toFixed(1)}%</Text>
-        <Text style={styles.gradeValue}>
-          Grade: {ScoringService.getGrade(score)}
-        </Text>
-      </View>
-    );
+      // Start transcription
+      await startShadowing(); // Ensure this function starts the transcription
+    }
+  };
 
   const fetchCaptions = async (videoId: string) => {
     try {
@@ -122,7 +134,7 @@ export const ShadowingSession = ({ route }: Props) => {
       const data = await response.json();
       if (data.items && data.items.length > 0) {
         const captionTrack = data.items[0];
-        setTranscription(captionTrack.snippet.text);
+        setCurrentCaption(captionTrack.snippet.text);
       }
     } catch (error) {
       console.error("Error fetching captions:", error);
@@ -159,11 +171,7 @@ export const ShadowingSession = ({ route }: Props) => {
           videoId={video.id}
           onChangeState={onStateChange}
           onReady={() => fetchCaptions(video.id)}
-          // For captions, we can use the onPlaybackQualityChange prop to track caption updates
-          onPlaybackQualityChange={(caption: string) =>
-            onCaptionChange(caption)
-          }
-          // Additional available props:
+          onPlaybackQualityChange={(caption: string) => onCaptionChange(caption)}
           webViewProps={{
             allowsFullscreenVideo: true,
             allowsInlineMediaPlayback: true,
@@ -177,58 +185,17 @@ export const ShadowingSession = ({ route }: Props) => {
         />
       </View>
 
-      <View style={styles.controlsContainer}>
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={handlePlayPause}
-        >
-          <MaterialIcons
-            name={playing ? "pause" : "play-arrow"}
-            size={24}
-            color="white"
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.recordButton, isRecording && styles.recordingActive]}
-          onPress={startShadowing}
-          disabled={isRecording}
-        >
-          <MaterialIcons
-            name={isRecording ? "mic" : "mic-none"}
-            size={24}
-            color="white"
-          />
-          <Text style={styles.buttonText}>
-            {isRecording ? "Recording..." : "Start Shadowing"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.transcriptionContainer}>
-        <View style={styles.captionBox}>
-          <Text style={styles.sectionTitle}>YouTube Captions</Text>
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.scrollBox}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={styles.captionText}>{currentCaption}</Text>
-          </ScrollView>
-        </View>
-
-        <View style={styles.speechBox}>
-          <Text style={styles.sectionTitle}>Your Speech</Text>
-          <ScrollView
-            style={styles.scrollBox}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={styles.speechText}>{userSpeech}</Text>
-          </ScrollView>
-        </View>
+        <Text style={styles.transcriptionTitle}>Current Text:</Text>
+        <Text style={styles.transcriptionText}>{displayText || "No speech detected"}</Text>
       </View>
 
-      {renderScoreSection()}
+      <TouchableOpacity
+        style={[styles.controlButton, isTranscribing ? styles.recordingButton : null]}
+        onPress={handleStartShadowing}
+      >
+        <Text style={styles.buttonText}>{isTranscribing ? "Stop Transcribing" : "Start Transcribing"}</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -237,11 +204,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 16,
   },
   languagePickerContainer: {
     backgroundColor: "#fff",
@@ -255,111 +218,39 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   videoContainer: {
-    backgroundColor: "#000",
-    width: "100%",
-    aspectRatio: 16 / 9,
+    marginBottom: 16,
   },
-  controlsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    padding: 15,
+  transcriptionContainer: {
+    marginBottom: 16,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  transcriptionTitle: {
+    fontWeight: "bold",
+  },
+  transcriptionText: {
+    fontSize: 16,
+    color: "#333",
   },
   controlButton: {
-    backgroundColor: "#4a90e2",
+    backgroundColor: "#007BFF",
     padding: 12,
-    borderRadius: 25,
-  },
-  recordButton: {
-    flexDirection: "row",
-    backgroundColor: "#2ecc71",
-    padding: 12,
-    borderRadius: 25,
+    borderRadius: 8,
     alignItems: "center",
-    minWidth: 150,
-    justifyContent: "center",
   },
-  recordingActive: {
-    backgroundColor: "#e74c3c",
+  recordingButton: {
+    backgroundColor: "red",
   },
   buttonText: {
     color: "white",
-    marginLeft: 8,
-    fontWeight: "600",
-  },
-  transcriptionContainer: {
-    flex: 1,
-    padding: 10,
-  },
-  captionBox: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  speechBox: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  sectionTitle: {
     fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#2c3e50",
   },
-  scrollBox: {
+  loadingContainer: {
     flex: 1,
-  },
-  captionText: {
-    fontSize: 16,
-    color: "#34495e",
-    lineHeight: 24,
-  },
-  speechText: {
-    fontSize: 16,
-    color: "#2980b9",
-    lineHeight: 24,
-  },
-  scoreContainer: {
-    backgroundColor: "#ffffff",
-    padding: 15,
-    margin: 10,
-    borderRadius: 10,
+    justifyContent: "center",
     alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  scoreTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#2c3e50",
-    marginBottom: 8,
-  },
-  scoreValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#27ae60",
-  },
-  gradeValue: {
-    fontSize: 20,
-    color: "#16a085",
-    marginTop: 4,
   },
 });

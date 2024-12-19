@@ -1,59 +1,51 @@
-import Voice from "@react-native-voice/voice";
+import * as Speech from 'expo-speech';
+import { Audio } from 'expo-av'; 
 
-export class SpeechService {
-  private static currentLocale: string = "en-US";
+class SpeechService {
+    private currentLocale: string = "en-US";
+    private onSpeechCallback?: (speech: string) => void;
 
-  static setLocale(locale: string) {
-    this.currentLocale = locale;
-  }
-
-  static getLocale(): string {
-    return this.currentLocale;
-  }
-
-  static async initialize() {
-    try {
-      const isAvailable = await Voice.isAvailable();
-      if (!isAvailable) {
-        throw new Error("Speech recognition is not available");
-      }
-      await Voice.start(this.currentLocale);
-    } catch (error) {
-      throw new Error(`Speech initialization failed: ${error}`);
+    setLocale(locale: string) {
+        this.currentLocale = locale;
+        console.log(`Locale set to: ${this.currentLocale}`);
     }
-  }
 
-  static async startListening(): Promise<string> {
-    try {
-      await Voice.start(this.currentLocale);
-      return new Promise((resolve, reject) => {
-        Voice.onSpeechResults = (e: any) => {
-          if (e.value && e.value.length > 0) {
-            resolve(e.value[0]);
-          }
-        };
-        Voice.onSpeechError = (e: any) => {
-          reject(e);
-        };
-      });
-    } catch (error) {
-      throw new Error(`Speech recognition failed: ${error}`);
+    async initialize() {
+        // Request microphone permissions
+        const { status } = await Audio.requestPermissionsAsync();
+        if (status !== 'granted') {
+            console.error('Microphone permission not granted');
+            return;
+        }
+        console.log("Speech service initialized");
     }
-  }
 
-  static async destroy() {
-    try {
-      await Voice.destroy();
-    } catch (error) {
-      console.warn("Speech service cleanup error:", error);
+    async startListening(callback: (speech: string) => void): Promise<string> {
+        // Implement your voice recognition logic here
+        this.onSpeechCallback = callback;
+        console.log("Starting voice recognition...");
+        // Placeholder for actual voice recognition logic
+        return "User speech recognized"; // Replace with actual recognition result
     }
-  }
-  static async getSupportedLocales(): Promise<string[]> {
-    try {
-      const locales = await Voice.getSpeechRecognitionServices();
-      return locales || [];
-    } catch (error) {
-      throw new Error(`Failed to get supported locales: ${error}`);
+
+    stopListening() {
+        // Logic to stop voice recognition
+        console.log("Stopping voice recognition...");
     }
-  }
+
+    speak(text: string) {
+        Speech.speak(text);
+    }
+
+    async destroy() {
+        // Logic to clean up resources if needed
+        console.log("Speech service destroyed");
+    }
+
+    async getSupportedLocales(): Promise<string[]> {
+        // Return supported locales (this is a placeholder)
+        return ["en-US", "fr-FR", "es-ES"]; // Replace with actual supported locales
+    }
 }
+
+export default new SpeechService();
