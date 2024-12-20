@@ -1,14 +1,18 @@
 module.exports = {
-  preset: "react-native",
-  setupFilesAfterEnv: ["./jest.setup.js"],
-  testEnvironment: "node",
-  transformIgnorePatterns: [
-    "node_modules/(?!(react-native|@react-native|@react-navigation|@expo|expo|@unimodules))",
-  ],
+  preset: 'react-native',
   transform: {
-    "^.+\\.(js|jsx|ts|tsx)$": [
-      "babel-jest",
-      { configFile: "./babel.config.js" },
-    ],
+    '^.+\\.tsx?$': 'ts-jest',
   },
+  testEnvironment: 'node',
+  moduleNameMapper: {
+    '@env': './.env', // Ensure this path is correct
+  },
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json',
+    },
+  },
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/playwright-tests/'], // Exclude Playwright tests
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'], // Add Detox setup
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'], // Add Detox setup
 };

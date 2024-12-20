@@ -8,6 +8,7 @@ import {
   ScrollView,
   SafeAreaView,
   ActivityIndicator,
+  Button,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import YoutubePlayer from "react-native-youtube-iframe";
@@ -25,7 +26,7 @@ interface Props {
 }
 
 export const ShadowingSession = ({ route }: Props) => {
-  const [displayText, setDisplayText] = useState(""); // State for displaying text
+  const [displayText, setDisplayText] = useState("");
   const [score, setScore] = useState<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -76,10 +77,13 @@ export const ShadowingSession = ({ route }: Props) => {
   };
 
   const onCaptionChange = (caption: string) => {
-    // Update the display text with the new caption
     setDisplayText((prev) => {
-      const newText = prev + " " + caption; // Append new caption
-      return newText.length > 100 ? newText.slice(-100) : newText; // Keep the last 100 characters
+      if (prev.endsWith(caption)) {
+        return prev;
+      }
+      const cleanedCaption = caption.replace(/(um|uh|like)\s+/g, '').trim();
+      const newText = prev + " " + cleanedCaption;
+      return newText.length > 100 ? newText.slice(-100) : newText;
     });
   };
 
@@ -88,10 +92,9 @@ export const ShadowingSession = ({ route }: Props) => {
     setIsTranscribing(true);
     try {
       await SpeechService.startListening((speech) => {
-        // Update the display text in real-time as speech is recognized
         setDisplayText((prev) => {
-          const newText = speech; // Update with the current speech
-          return newText.length > 100 ? newText.slice(-100) : newText; // Keep the last 100 characters
+          const newText = prev + " " + speech;
+          return newText.length > 100 ? newText.slice(-100) : newText;
         });
       });
     } catch (error) {
@@ -109,20 +112,15 @@ export const ShadowingSession = ({ route }: Props) => {
 
   const handleStartShadowing = async () => {
     if (isTranscribing) {
-      // Stop transcription and YouTube playback
       setIsTranscribing(false);
-      setIsRecording(false); // Stop recording
-      setPlaying(false); // Stop playing the video
-      // Call any necessary cleanup functions here
-      await SpeechService.stopListening(); // Ensure to stop listening
+      setIsRecording(false);
+      setPlaying(false);
+      await SpeechService.stopListening();
     } else {
-      // Start playing the video and recording
-      setPlaying(true); // Start playing the video
-      setIsRecording(true); // Start recording
-      setIsTranscribing(true); // Set loading state
-
-      // Start transcription
-      await startShadowing(); // Ensure this function starts the transcription
+      setPlaying(true);
+      setIsRecording(true);
+      setIsTranscribing(true);
+      await startShadowing();
     }
   };
 
@@ -139,6 +137,16 @@ export const ShadowingSession = ({ route }: Props) => {
     } catch (error) {
       console.error("Error fetching captions:", error);
     }
+  };
+
+  const handleSpeak = () => {
+    const textToSpeak = 'Welcome to the shadowing session!';
+    SpeechService.speak(textToSpeak);
+  };
+
+  const handleTextToSpeech = () => {
+    const textToSpeak = displayText;
+    SpeechService.speak(textToSpeak);
   };
 
   if (isLoading) {
@@ -190,12 +198,20 @@ export const ShadowingSession = ({ route }: Props) => {
         <Text style={styles.transcriptionText}>{displayText || "No speech detected"}</Text>
       </View>
 
+      <View style={styles.transcriptionContainer}>
+        <Text style={styles.transcriptionTitle}>Transcription:</Text>
+        <Text style={styles.transcriptionText}>{displayText}</Text>
+      </View>
+
       <TouchableOpacity
         style={[styles.controlButton, isTranscribing ? styles.recordingButton : null]}
         onPress={handleStartShadowing}
       >
         <Text style={styles.buttonText}>{isTranscribing ? "Stop Transcribing" : "Start Transcribing"}</Text>
       </TouchableOpacity>
+
+      <Button title="Speak" onPress={handleSpeak} />
+      <Button title="Text to Speech" onPress={handleTextToSpeech} />
     </SafeAreaView>
   );
 };

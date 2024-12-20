@@ -4,6 +4,7 @@ import { Audio } from 'expo-av';
 class SpeechService {
     private currentLocale: string = "en-US";
     private onSpeechCallback?: (speech: string) => void;
+    private sound: Audio.Sound | null = null;
 
     setLocale(locale: string) {
         this.currentLocale = locale;
@@ -20,31 +21,42 @@ class SpeechService {
         console.log("Speech service initialized");
     }
 
+    async initializeAudio() {
+        const { status } = await Audio.requestPermissionsAsync();
+        if (status !== 'granted') {
+            console.error('Permission to access audio was denied');
+            return;
+        }
+        console.log("Audio initialized, ready for recording.");
+    }
+
     async startListening(callback: (speech: string) => void): Promise<string> {
-        // Implement your voice recognition logic here
+        await this.initializeAudio(); // Initialize audio before starting listening
+
         this.onSpeechCallback = callback;
         console.log("Starting voice recognition...");
+
         // Placeholder for actual voice recognition logic
         return "User speech recognized"; // Replace with actual recognition result
     }
 
     stopListening() {
-        // Logic to stop voice recognition
         console.log("Stopping voice recognition...");
     }
 
     speak(text: string) {
+        if (text.length > Speech.maxSpeechInputLength) {
+            throw new Error(`Text exceeds maximum length of ${Speech.maxSpeechInputLength}`);
+        }
         Speech.speak(text);
     }
 
     async destroy() {
-        // Logic to clean up resources if needed
         console.log("Speech service destroyed");
     }
 
     async getSupportedLocales(): Promise<string[]> {
-        // Return supported locales (this is a placeholder)
-        return ["en-US", "fr-FR", "es-ES"]; // Replace with actual supported locales
+        return ["en-US", "fr-FR", "es-ES", "jp-JP", "tr-TR"];
     }
 }
 

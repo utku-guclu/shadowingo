@@ -1,4 +1,5 @@
 import { YOUTUBE_API_KEY } from "@env";
+import * as Speech from 'expo-speech';
 
 export interface VideoDetails {
   id: string;
@@ -35,5 +36,33 @@ export class YouTubeService {
       thumbnail: item.snippet.thumbnails.medium.url,
       duration: "", // We'll fetch this in a separate call
     }));
+  }
+
+  public speak(text: string) {
+    // Ensure the text is within the maximum length
+    if (text.length > Speech.maxSpeechInputLength) {
+      throw new Error(`Text exceeds maximum length of ${Speech.maxSpeechInputLength}`);
+    }
+    Speech.speak(text);
+  }
+
+  public async getAvailableVoices() {
+    return await Speech.getAvailableVoicesAsync();
+  }
+
+  public async isSpeaking() {
+    return await Speech.isSpeakingAsync();
+  }
+
+  public pause() {
+    Speech.pause();
+  }
+
+  public resume() {
+    Speech.resume();
+  }
+
+  public stop() {
+    Speech.stop();
   }
 }
